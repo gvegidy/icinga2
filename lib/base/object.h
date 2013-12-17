@@ -22,6 +22,7 @@
 
 #include "base/i2-base.h"
 #include "base/debug.h"
+#include "base/thinmutex.h"
 #include <boost/thread/thread.hpp>
 
 #ifndef _DEBUG
@@ -148,7 +149,8 @@ private:
 	mutable boost::thread::id m_LockOwner;
 #endif /* _DEBUG */
 
-	mutable MutexType m_Mutex;
+	mutable ThinMutex m_Mutex;
+//	mutable MutexType m_Mutex;
 
 	friend struct ObjectLock;
 };

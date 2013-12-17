@@ -32,9 +32,9 @@ add_library(base SHARED
   script.th scriptfunction.cpp scriptfunctionwrapper.cpp scriptinterpreter.cpp
   scriptlanguage.cpp scriptvariable.cpp serializer.cpp socket.cpp stacktrace.cpp
   stdiostream.cpp stream_bio.cpp stream.cpp streamlogger.cpp streamlogger.th
-  sysloglogger.cpp sysloglogger.th tcpsocket.cpp threadpool.cpp timer.cpp
-  tlsstream.cpp tlsutility.cpp type.cpp unixsocket.cpp utility.cpp value.cpp
-  workqueue.cpp zlibstream.cpp
+  sysloglogger.cpp sysloglogger.th tcpsocket.cpp thinmutex.cpp threadpool.cpp
+  timer.cpp tlsstream.cpp tlsutility.cpp type.cpp unixsocket.cpp utility.cpp
+  value.cpp workqueue.cpp zlibstream.cpp
 )
 
 target_link_libraries(base ${CMAKE_DL_LIBS} ${Boost_LIBRARIES} ${OPENSSL_LIBRARIES} cJSON mmatch)

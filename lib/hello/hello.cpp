@@ -20,6 +20,7 @@
 #include "hello/hello.h"
 #include "base/dynamictype.h"
 #include "base/logger_fwd.h"
+#include "base/convert.h"
 
 using namespace icinga;
 
@@ -33,6 +34,17 @@ REGISTER_TYPE(Hello);
 int Hello::Main(void)
 {
 	Log(LogInformation, "hello", "Hello World!");
+
+#define PRINT_SIZE(type) Log(LogInformation, "hello", "sizeof(" #type ") = " + Convert::ToString(sizeof(type)));
+
+	PRINT_SIZE(int);
+	PRINT_SIZE(double);
+	PRINT_SIZE(String);
+	PRINT_SIZE(Object::Ptr);
+	PRINT_SIZE(Value);
+	PRINT_SIZE(Object);
+	PRINT_SIZE(Dictionary);
+	PRINT_SIZE(Array);
 
 	return 0;
 }
