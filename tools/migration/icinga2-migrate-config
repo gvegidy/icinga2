@@ -1481,6 +1481,48 @@ sub convert_notification_options_to_filter {
     return $filter;
 }
 
+sub convert_dependendy_failure_criteria_2x {
+    my $fail_criteria = shift;
+    my $type = shift;
+
+    my $filter = ();
+    @{$filter->{'state'}} = ();
+
+    # define all types - p not supported
+    my $filter_names = {
+        'o' => 'StateFilterOK',
+        'w' => 'StateFilterWarning',
+        'c' => 'StateFilterCritical',
+        'u' => 'StateFilterUnknown',
+        'd' => 'StateFilterCritical', # down, treated as critical
+    };
+
+    # by default checks are run
+    # but notifications suppressed
+    if ($type eq 'check') {
+        $filter->{'runeverything'} = 1;
+    } else {
+        $filter->{'runeverything'} = 0;
+    }
+
+    # host o,d,u.p,n
+    # service o,w,u,c,p,n
+    my @options = str2arr_by_delim_without_excludes($fail_criteria, ',', 1);
+
+    if (grep(/n/, @options)) {
+        push @{$filter->{'state'}}, 'StateFilterOK';
+        $filter->{'runeverything'} = 1;
+        return $filter;
+    }
+
+    foreach my $option (@options) {
+        next if !defined($filter_names->{$option});
+        push @{$filter->{'state'}}, $filter_names->{$option};
+    }
+
+    return $filter;
+}
+
 # host|service_notification_commands are a comma seperated list w/o arguments
 sub convert_notificationcommand {
     my $objs_1x = shift;
@@ -2503,6 +2545,9 @@ sub migrate_2x {
         my @master_host_names = str2arr_by_delim_without_excludes($obj_1x_servicedependency->{'host_name'}, ',', 1);
         my @child_host_names = str2arr_by_delim_without_excludes($obj_1x_servicedependency->{'dependent_host_name'}, ',', 1);
 
+        my $exec_fail_crit = convert_dependendy_failure_criteria_2x($obj_1x_servicedependency->{'execution_failure_criteria'}, 'check');
+        my $notif_fail_crit = convert_dependendy_failure_criteria_2x($obj_1x_servicedependency->{'notification_failure_criteria'}, 'notification');
+
         my $master_service_description = $obj_1x_servicedependency->{'service_description'};
         my $child_service_description = $obj_1x_servicedependency->{'dependent_service_description'};
 
@@ -2519,6 +2564,11 @@ sub migrate_2x {
                 my $master_key = $master_host_name."-".$master_service_description;
                 $child_service_obj->{'__I2CONVERT_PARENT_SERVICES'}->{$master_key}->{'host'} = $master_host_name;
                 $child_service_obj->{'__I2CONVERT_PARENT_SERVICES'}->{$master_key}->{'service'} = $master_service_description;
+
+                $child_service_obj->{'__I2CONVERT_PARENT_SERVICES'}->{$master_key}->{'state_filter'} = @{$exec_fail_crit->{'state'});
+                $child_service_obj->{'__I2CONVERT_PARENT_SERVICES'}->{$master_key}->{'disable_checks'} = ($exec_fail_crit->{'runeverything'} == 0 ? 1 : 0);
+                $child_service_obj->{'__I2CONVERT_PARENT_SERVICES'}->{$master_key}->{'disable_notifications'} = ($notif_fail_crit->{'runeverything'} == 0 ? 1 : 0);
+                $child_service_obj->{'__I2CONVERT_PARENT_SERVICES'}->{$master_key}->{'period'} = $obj_1x_servicedependency->{'dependency_period'});
             }
         }
 
@@ -3854,6 +3904,10 @@ sub dump_service_2x {
             dump_config_line($icinga2_cfg, "\tdependencies[\"".$servicedep->{'host'}."-".$servicedep->{'service'}."\"] = {");
             dump_config_line($icinga2_cfg, "\t\tparent_host = \"$servicedep->{'host'}\",");
             dump_config_line($icinga2_cfg, "\t\tparent_service = \"$servicedep->{'service'}\"");
+            dump_config_line($icinga2_cfg, "\t\tstate_filter = \"$servicedep->{'tstate_filter'}\"");
+            dump_config_line($icinga2_cfg, "\t\tdisable_checks = \"$servicedep->{'tdisable_checks'}\"");
+            dump_config_line($icinga2_cfg, "\t\tdisable_notifications = \"$servicedep->{'tdisable_notifications'}\"");
+            dump_config_line($icinga2_cfg, "\t\tperiod = \"$servicedep->{'tperiod'}\"");
             dump_config_line($icinga2_cfg, "\t},");
         }
     }
