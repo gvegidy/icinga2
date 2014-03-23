@@ -147,7 +147,6 @@ status() {
 ### main logic ###
 case "$1" in
   start)
-	checkconfig start fail
         start
         ;;
   stop)
