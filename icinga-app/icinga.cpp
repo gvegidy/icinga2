@@ -372,16 +372,6 @@ int main(int argc, char **argv)
 		return EXIT_FAILURE;
 	}
 
-	if (g_AppParams.count("daemonize")) {
-		String errorLog;
-
-		if (g_AppParams.count("errorlog"))
-			errorLog = g_AppParams["errorlog"].as<String>();
-
-		Daemonize(errorLog);
-		Logger::DisableConsoleLog();
-	}
-
 	ValidationType validate = ValidateStart;
 
 	if(g_AppParams.count("validate"))
@@ -396,6 +386,16 @@ int main(int argc, char **argv)
 	if (validate == ValidateOnly) {
 		Log(LogInformation, "icinga-app", "Finished validating the configuration file(s).");
 		return EXIT_SUCCESS;
+	}
+
+	if (g_AppParams.count("daemonize")) {
+		String errorLog;
+
+		if (g_AppParams.count("errorlog"))
+			errorLog = g_AppParams["errorlog"].as<String>();
+
+		Daemonize(errorLog);
+		Logger::DisableConsoleLog();
 	}
 
 #ifndef _WIN32
