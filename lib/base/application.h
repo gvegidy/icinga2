@@ -24,6 +24,7 @@
 #include "base/application.th"
 #include "base/threadpool.h"
 #include "base/dynamicobject.h"
+#include "base/process.h"
 
 namespace icinga {
 
@@ -116,6 +117,7 @@ private:
 	static bool m_ShuttingDown; /**< Whether the application is in the process of
 				  shutting down. */
 	static bool m_Restarting;
+	static bool m_CheckingRestart;
 	static int m_ArgC; /**< The number of command-line arguments. */
 	static char **m_ArgV; /**< Command-line arguments. */
 	FILE *m_PidFile; /**< The PID file */
@@ -137,6 +139,9 @@ private:
 
 	static void TimeWatchThreadProc(void);
 	static void NewTxTimerHandler(void);
+	
+	static void CheckConfig(void);
+	static void CheckConfigCallback(const ProcessResult& pr);
 };
 
 }

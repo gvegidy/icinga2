@@ -39,6 +39,7 @@
 #include <boost/exception/errinfo_errno.hpp>
 #include <boost/exception/errinfo_file_name.hpp>
 #include <iostream>
+#include <vector>
 
 using namespace icinga;
 
@@ -47,6 +48,7 @@ REGISTER_TYPE(Application);
 Application *Application::m_Instance = NULL;
 bool Application::m_ShuttingDown = false;
 bool Application::m_Restarting = false;
+bool Application::m_CheckingRestart = false;
 bool Application::m_Debugging = false;
 int Application::m_ArgC;
 char **Application::m_ArgV;
@@ -170,8 +172,20 @@ void Application::RunEventLoop(void) const
 
 	Timer::Initialize();
 
-	while (!m_ShuttingDown && !m_Restarting)
-		Utility::Sleep(0.5);
+	do
+	{
+		while (!m_ShuttingDown && !m_Restarting)
+			Utility::Sleep(0.5);
+
+		if (m_Restarting && !m_CheckingRestart)
+		{
+			// do we really want to restart? We don't if we have a bad config now
+			Log(LogInformation, "base", "Got signal to reload - checking config first...");
+			m_CheckingRestart=true;
+			m_Restarting=false;         // stay in main loop until check result arrived
+			Application::CheckConfig();
+		}
+	} while (!m_Restarting);
 
 	Log(LogInformation, "base", "Shutting down Icinga...");
 	DynamicObject::StopObjects();
@@ -794,4 +808,44 @@ double Application::GetStartTime(void)
 void Application::SetStartTime(double ts)
 {
 	m_StartTime = ts;
+}
+
+/**
+ * Checks if the configuration files are ok.
+ *
+ * @returns True if ok
+ */
+void Application::CheckConfig(void)
+{
+	bool result;
+
+	// prepare arguments
+	std::vector<String> args;
+	args.push_back(GetExePath(m_ArgV[0]));
+
+	// TODO: filter out unwanted parameters, e.g. --no-validate
+	for (int i=1; i < Application::GetArgC(); i++)
+		args.push_back(Application::GetArgV()[i]);
+	args.push_back("-C");
+
+	Process::Ptr process = make_shared<Process>(args);
+
+	// TODO: process->SetTimeout(xx);
+
+	process->Run(boost::bind(&Application::CheckConfigCallback, _1));
+}
+
+void Application::CheckConfigCallback(const ProcessResult& pr)
+{
+	if (pr.ExitStatus != 0)
+	{
+		Log(LogCritical, "base", "Found error in config: reloading aborted");
+		m_Restarting=false;
+		m_CheckingRestart=false;
+	}
+	else
+	{
+		Log(LogInformation, "base", "Config ok - reloading...");
+		m_Restarting=true;
+	}
 }
